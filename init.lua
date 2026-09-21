@@ -350,7 +350,12 @@ require('lazy').setup({
   { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
     event = 'VimEnter',
-    branch = '0.1.x',
+    -- NOTE: Track the default branch rather than pinning `0.1.x`. That branch has not
+    --  moved since May 2024, and it highlights its previews through `nvim-treesitter`'s
+    --  own modules -- `nvim-treesitter.parsers.ft_to_lang` and `nvim-treesitter.configs`
+    --  -- which the plugin's `main` branch does not have. The preview would then fail
+    --  with "attempt to call field 'ft_to_lang' (a nil value)". The default branch calls
+    --  `vim.treesitter.language.get_lang()` in Neovim itself and needs no such plugin.
     dependencies = {
       'nvim-lua/plenary.nvim',
       { -- If encountering errors, see telescope-fzf-native README for installation instructions
