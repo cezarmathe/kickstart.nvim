@@ -905,15 +905,42 @@ require('lazy').setup({
     config = function()
       ---@diagnostic disable-next-line: missing-fields
       require('tokyonight').setup {
+        -- Which variant to use for each value of 'background'. Neovim asks the terminal
+        -- for its background colour (OSC 11) and keeps 'background' in sync with it, so
+        -- these are what you actually get when the terminal theme changes.
+        style = 'night', -- when 'background' is dark
+        light_style = 'day', -- when 'background' is light
         styles = {
           comments = { italic = false }, -- Disable italics in comments
         },
       }
 
       -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      --
+      -- NOTE: Load `tokyonight`, not a pinned variant like `tokyonight-night`. A pinned
+      -- variant disagrees with 'background' whenever the terminal is light, and
+      -- tokyonight resolves that by forcing `vim.o.background` to match itself. Neovim
+      -- reads any script-set 'background' as "the user picked this by hand" and, at
+      -- VimEnter, deletes the autocommand that tracks the terminal's colour -- so the
+      -- editor stops following the terminal theme for the rest of the session.
+      -- `tokyonight` instead picks its variant *from* 'background' and never writes to
+      -- it, which keeps that tracking alive.
+      vim.cmd.colorscheme 'tokyonight'
+
+      -- Changing 'background' makes Vim re-source the *current* colorscheme, which by
+      -- then is a variant file such as `tokyonight-day`. Asked for a dark screen while
+      -- it thinks it is the day theme, tokyonight falls back to whichever dark variant
+      -- it happens to have cached -- `moon` if it has never loaded one -- so switching
+      -- the terminal to dark lands on the wrong theme. Re-selecting `tokyonight` picks
+      -- the variant from 'background' again and settles it on `style`/`light_style`.
+      vim.api.nvim_create_autocmd('OptionSet', {
+        group = vim.api.nvim_create_augroup('kickstart-colorscheme-background', { clear = true }),
+        pattern = 'background',
+        desc = 'Follow the terminal between its light and dark themes',
+        callback = function()
+          vim.cmd.colorscheme 'tokyonight'
+        end,
+      })
     end,
   },
 
